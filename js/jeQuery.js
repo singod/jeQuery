@@ -132,12 +132,26 @@
 			if (fn(i, arr[i]) === false) break;
 		}
 	};
-	jeQuery.each("Boolean Number String Function Array Date RegExp Object Error".split(" "),function(i, name) {
-        class2type[ "[object " + name + "]" ] = name.toLowerCase();
-    });
-	jeQuery.type=function(obj) {
-		return obj == null ? String(obj) : class2type[toString.call(obj)] || "object";
-	}
+	jeQuery.extend = function() {
+		var _extend = function me(dest, source) {
+			for (var name in dest) {
+				if (dest.hasOwnProperty(name)) {
+					//当前属性是否为对象,如果为对象，则进行递归
+					if ((dest[name] instanceof Object) && (source[name] instanceof Object)) {
+						me(dest[name], source[name]);
+					}
+					//检测该属性是否存在
+					if (source.hasOwnProperty(name)) { continue;  } else {  source[name] = dest[name];  }
+				}
+			}
+		}
+		var _result = {},  arr = arguments;
+		//遍历属性，至后向前
+		if (!arr.length) return {};
+		for (var i = arr.length - 1; i >= 0; i--) {  _extend(arr[i], _result);  }
+		arr[0] = _result;
+		return _result;
+	};
 	jeQuery.fn = Querys.prototype = {
 		constructor:jeQuery,
 		size:function() {
@@ -163,25 +177,25 @@
 			return this;
 		},
 		css:function(key, value) {
-			if(typeof key === 'string' && typeof value == 'string'){
+			if(typeof(key) === 'string' && typeof(value) == 'string'){
 				this.each(function() {
 				    this.style[key] = value;
 				})
-			}else if (typeof key == "string") {
+			}else if (typeof(key) == "string") {
 				if (this.size() == 0) return null;
-				var ele = this.elements[0], JQS = function() {
-					var f = document.defaultView;
-					return new Function("el", "style", [ "style.indexOf('-')>-1 && (style=style.replace(/-(\\w)/g,function(m,a){return a.toUpperCase()}));", "style=='float' && (style='", f ? "cssFloat" :"styleFloat", "');return el.style[style] || ", f ? "window.getComputedStyle(el, null)[style]" :"el.currentStyle[style]", " || null;" ].join(""));
+				var ele = this.elements[0], JeS = function() {
+					var def = document.defaultView;
+					return new Function("el", "style", [ "style.indexOf('-')>-1 && (style=style.replace(/-(\\w)/g,function(m,a){return a.toUpperCase()}));", "style=='float' && (style='", def ? "cssFloat" :"styleFloat", "');return el.style[style] || ", def ? "window.getComputedStyle(el, null)[style]" :"el.currentStyle[style]", " || null;" ].join(""));
 				}();
-				return JQS(ele, key);
+				return JeS(ele, key);
 			} else {
 				this.each(function() {
 					for (var x in key) {
 						this.style[x] = key[x];
 					}
-				});
-				return this;
+				});	
 			}
+			return this;
 		},
 		index:function() {
 			var children = this.elements[0].parentNode.children;
@@ -191,16 +205,12 @@
 		},
 		//hide 方法
 		hide:function() {
-			for (var i = 0; i < this.elements.length; i++) {
-				this.elements[i].style.display = "none";
-			}
+			this.css("display","none");
 			return this;
 		},
 		//show方法
 		show:function() {
-			for (var i = 0; i < this.elements.length; i++) {
-				this.elements[i].style.display = "block";
-			}
+			this.css("display","block");
 			return this;
 		},
 		html:function(value) {
@@ -234,21 +244,15 @@
 			return this;
 		},
 		//获取节点attr属性
-		attr:function(attr, value) {
-			for (var i = 0; i < this.elements.length; i++) {
-				if (arguments.length == 1) {
-					if (typeof attr === "string") {
-						return this.elements[i].getAttribute(attr);
-					} else if (typeof props === "object") {
-						for (var j in attr) {
-							this.elements[i].setAttribute(j, attr[j]);
-						}
-					}
-				} else if (arguments.length == 2) {
-					this.elements[i].setAttribute(attr, value);
-				}
-			}
-			return this;
+		attr:function(name, value) {
+            var result,k;
+            return (typeof(name) == 'string' && !(1 in arguments)) ?
+            (!this.size() || this.elements[0].nodeType !== 1 ? undefined :
+                (!(result = this.elements[0].getAttribute(name)) && name in this.elements[0]) ? this.elements[0][name] : result
+            ) : this.each(function(n){
+                if (typeof(name) == 'object') for(k in name) this.setAttribute(k, name[k]);
+                else this.setAttribute(name,value);
+            });
 		},
 		find:function(selector){ var context = this.elements[0]; return jeQuery(selector,context); },
 		//阻止事件默认行为
@@ -266,23 +270,24 @@
 			return this;
 		},
 		//on事件
-		on:function(type, fn) {
-			for (var i = 0; i < this.elements.length; i++) {
-				addEvent(this.elements[i], type, fn);
-			}
+		on:function(type, callback) {
+			this.each(function() {
+				addEvent(this, type, callback);
+			})
 			return this;
 		},
 		//移除事件
-		removeon:function(type, handler) {
-			for (var i = 0; i < this.elements.length; i++) {
-				if (this.elements[i].removeEventListener) {
-					this.elements[i].removeEventListener(type, handler, false);
-				} else if (this.elements[i].detachEvent) {
-					this.elements[i].detachEvent("on" + type, handler);
+		removeon:function(type, callback) {
+			this.each(function() {
+				if (this.removeEventListener) {
+					this.removeEventListener(type, callback, false);
+				} else if (this.detachEvent) {
+					this.detachEvent("on" + type, callback);
 				} else {
-					this.elements[i]["on" + type] = null;
+					this["on" + type] = null;
 				}
-			}
+			});
+			return this;
 		},
 		//查询样式是否存在
 		hasClass : function(cls){
@@ -292,25 +297,37 @@
 		},
 		//添加样式
 		addClass:function(cls) {
-			for (var i = 0; i < this.elements.length; i++) {
-				this.hasClass(cls) || (this.elements[i].className += ' ' + cls);
-				this.elements[i].className = this.elements[i].className.replace(/^\s|\s$/g, '').replace(/\s+/g, ' ');
-			}
+			var that = this;
+			this.each(function() {
+				that.hasClass(cls) || (this.className += ' ' + cls);
+				this.className = this.className.replace(/^\s|\s$/g, '').replace(/\s+/g, ' ');
+			})
 			return this;
+		},
+		offset:function(){
+			if(this.size()==0) return null;
+			var obj = this.elements[0].getBoundingClientRect();
+			return {
+				left: obj.left + window.pageXOffset,
+				top: obj.top + window.pageYOffset,
+				width: obj.width,
+				height: obj.height
+			};
 		},
 		//删除样式
-		removeClass : function(elem, cls) {
-			for (var i = 0; i < this.elements.length; i++) {
-				if (this.hasClass(cls)) {
-					this.elements[i].className = this.elements[i].className.replace(new RegExp('(\\s|^)' + cls +'(\\s|$)'), '');
+		removeClass : function(cls) {
+			var that = this;
+			this.each(function() {
+				if (that.hasClass(cls)) {
+					this.className = this.className.replace(new RegExp('(\\s|^)' + cls +'(\\s|$)'), '');
 				}
-			}
+			})
 			return this;
 		},
-		append : function( ){		
+		append : function(){		
 			for( var i = 0; i < arguments.length; i++ ){			
 				var obj = arguments[i];	
-				this.each( function( ){				
+				this.each( function(){				
 					this.appendChild( obj );
 				});			
 			}
@@ -319,7 +336,6 @@
 	};
 	jeQuery.each(['width','height'],function(i,name){
 		jeQuery.fn[name]=function(value){
-			//this.each(function() {
 			for (var i = 0; i < this.elements.length; i++) {
 				if(value == undefined){
 					return getWH(this.elements[i], name);
@@ -329,26 +345,6 @@
 			}
 		}
 	})
-	jeQuery.extend = function() {
-		var _extend = function me(dest, source) {
-			for (var name in dest) {
-				if (dest.hasOwnProperty(name)) {
-					//当前属性是否为对象,如果为对象，则进行递归
-					if ((dest[name] instanceof Object) && (source[name] instanceof Object)) {
-						me(dest[name], source[name]);
-					}
-					//检测该属性是否存在
-					if (source.hasOwnProperty(name)) { continue;  } else {  source[name] = dest[name];  }
-				}
-			}
-		}
-		var _result = {},  arr = arguments;
-		//遍历属性，至后向前
-		if (!arr.length) return {};
-		for (var i = arr.length - 1; i >= 0; i--) {  _extend(arr[i], _result);  }
-		arr[0] = _result;
-		return _result;
-	};
 	//跨浏览器添加事件绑定
 	function addEvent(obj, type, fn) {
 		var UID = 1;
