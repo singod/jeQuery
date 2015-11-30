@@ -390,13 +390,26 @@
             obj["on" + type] = addEvent.exec;
         }
     }
+    addEvent.fixEvent=function(event) {
+        if (event.target) return event;
+        var event2 = {
+            target:event.srcElement || document,
+            preventDefault:function() {
+                event.returnValue = false;
+            },
+            stopPropagation:function() {
+                event.cancelBubble = true;
+            }
+        };
+        // IE6/7/8 在原生window.event对象写入数据会导致内存无法回收，应当采用拷贝
+        for (var i in event) event2[i] = event[i];
+        return event2;
+    }
     //执行事件处理函数
     addEvent.exec = function(event) {
         var e = event || addEvent.fixEvent(window.event);
         var es = this.events[e.type];
-        for (var i in es) {
-            es[i].call(this, e);
-        }
+        for (var i in es)  es[i].call(this, e);
     };
     //同一个注册函数进行屏蔽
     addEvent.equal = function(es, fn) {
