@@ -334,29 +334,29 @@
 	jeQuery.each(['append','prepend','before','after'],function(i,name){
 		jeQuery.fn[name]=function(html){
 			var tags = fragmentHtml(html,len);
-			for(var i = 0; i < this.elements.length; i++){
-                var nodes = tags[i], count = nodes.length, fragment=document.createDocumentFragment();
+			for(var s = 0; s < this.elements.length; s++){
+                var nodes = tags[s], count = nodes.length, fragment=document.createDocumentFragment();
 				for(var n = 0; n < count; n++){
 					fragment.appendChild(nodes[n]);
 				}
 				switch(name){
 					case "append":
-					this.elements[i].appendChild(fragment); break;
+					this.elements[s].appendChild(fragment); break;
 					case "prepend":
-					this.elements[i].insertBefore(fragment,this.elements[i].firstChild); break;
+					this.elements[s].insertBefore(fragment,this.elements[s].firstChild); break;
 					case "before":
-					this.elements[i].parentNode.insertBefore(fragment,this.elements[i]); break;
+					this.elements[s].parentNode.insertBefore(fragment,this.elements[s]); break;
 					case "after":
-					this.elements[i].parentNode.insertBefore(fragment,this.elements[i].nextSibling); break;
+					this.elements[s].parentNode.insertBefore(fragment,this.elements[s].nextSibling); break;
 				}
 			}
 		}
 	})
 	jeQuery.each(['width','height'],function(i,name){
 		jeQuery.fn[name]=function(value){
-			for (var i = 0; i < this.elements.length; i++) {
+			for (var s = 0; s < this.elements.length; s++) {
 				if(value == undefined){
-					return getWH(this.elements[i], name);
+					return getWH(this.elements[s], name);
 				}else{
 					this.css(name,value);
 				}
