@@ -329,17 +329,29 @@
 				}
 			})
 			return this;
-		},
-		append : function(){		
-			for( var i = 0; i < arguments.length; i++ ){			
-				var obj = arguments[i];	
-				this.each( function(){				
-					this.appendChild( obj );
-				});			
-			}
-			return this;
 		}
 	};
+	jeQuery.each(['append','prepend','before','after'],function(i,name){
+		jeQuery.fn[name]=function(html){
+			var tags = fragmentHtml(html,len);
+			for(var i = 0; i < this.elements.length; i++){
+                var nodes = tags[i], count = nodes.length, fragment=document.createDocumentFragment();
+				for(var n = 0; n < count; n++){
+					fragment.appendChild(nodes[n]);
+				}
+				switch(name){
+					case "append":
+					this.elements[i].appendChild(fragment); break;
+					case "prepend":
+					this.elements[i].insertBefore(fragment,this.elements[i].firstChild); break;
+					case "before":
+					this.elements[i].parentNode.insertBefore(fragment,this.elements[i]); break;
+					case "after":
+					this.elements[i].parentNode.insertBefore(fragment,this.elements[i].nextSibling); break;
+				}
+			}
+		}
+	})
 	jeQuery.each(['width','height'],function(i,name){
 		jeQuery.fn[name]=function(value){
 			for (var i = 0; i < this.elements.length; i++) {
@@ -409,4 +421,15 @@
 		}
 		return 0;
 	}
+	function fragmentHtml(htmlStr,len){
+		var htmlsArr = [];
+		for(var i = 0; i < len; i++){
+			var tempDiv = document.createElement("div");
+			tempDiv.innerHTML = htmlStr; 
+			var num = tempDiv.childNodes.length, tempArr = []
+			for(var k = 0; k < num; k++){ tempArr.push(tempDiv.childNodes[k]);  }
+			htmlsArr.push(tempArr);
+		}
+		return htmlsArr;
+	};
 })(window);
