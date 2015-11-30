@@ -333,21 +333,21 @@
 	};
 	jeQuery.each(['append','prepend','before','after'],function(i,name){
 		jeQuery.fn[name]=function(html){
-			var tags = fragmentHtml(html,len);
-			for(var s = 0; s < this.elements.length; s++){
-                var nodes = tags[s], count = nodes.length, fragment=document.createDocumentFragment();
+			var len = this.elements.length, tags = fragmentHtml(html,len);
+			for(var s = 0; s < len; s++){
+                var elems = this.elements[s], nodes = tags[s], count = nodes.length, fragment=document.createDocumentFragment();
 				for(var n = 0; n < count; n++){
 					fragment.appendChild(nodes[n]);
 				}
 				switch(name){
 					case "append":
-					this.elements[s].appendChild(fragment); break;
+					elems.appendChild(fragment); break;
 					case "prepend":
-					this.elements[s].insertBefore(fragment,this.elements[s].firstChild); break;
+					elems.insertBefore(fragment,elems.firstChild); break;
 					case "before":
-					this.elements[s].parentNode.insertBefore(fragment,this.elements[s]); break;
+					elems.parentNode.insertBefore(fragment,elems); break;
 					case "after":
-					this.elements[s].parentNode.insertBefore(fragment,this.elements[s].nextSibling); break;
+					elems.parentNode.insertBefore(fragment,elems.nextSibling); break;
 				}
 			}
 		}
