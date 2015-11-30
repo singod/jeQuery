@@ -254,6 +254,12 @@
                 else this.setAttribute(name,value);
             });
 		},
+		//删除节点attr属性
+		removeAttr: function(name) {
+			return this.each(function() {
+				1 === this.nodeType && this.removeAttribute(name);
+			});
+		},
 		find:function(selector){ var context = this.elements[0]; return jeQuery(selector,context); },
 		//阻止事件默认行为
 		stopPropagation:function(event) {
