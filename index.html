@@ -39,23 +39,25 @@
               <p class="pdiv">我是03号</p>
         </div>
     </div>
-
+    <div id="lens"></div>
+    <div id="num"></div>
+    <div id="gettext"></div>
     </section>
 
 <script>
 
 	var len = Je("#odiv p").size();
 
-	document.write("#odiv p的长度: "+len+'<br/>')
-    Je.each([1,2,3,4,5,6,7,8],function(i,val){
-		document.write("循环值："+val+'<br/>')
+	Je("#lens").append("#odiv p的长度: "+len+'<br/>')
+        Je.each([1,2,3,4,5,6,7,8],function(i,val){
+		Je("#num").append("循环值："+val+'<br/>')
 	})
 	Je("#odiv .odiv2 p").on("click",function(){
 		alert(Je(this).text())
 	})
 	Je("#odiv .odiv2").find("p").css({'border':'1px red solid'})
 	Je("#odiv .odiv3 p").each(function(i, val){
-		document.write("获取"+i+": "+Je(this).text()+'<br/>')
+		Je("#gettext").append("获取"+i+": "+Je(this).text()+'<br/>')
 	})
 	Je("#odiv").width("200px")
 </script>	  
