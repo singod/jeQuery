@@ -14,7 +14,7 @@
     if (window.Je === undefined) {
         window.Je = jeQuery = Je;
     }
-    var class2type = {}, emptyArray = [], document = window.document, root = this, slice = emptyArray.slice, cssWidth = [ "Left", "Right" ], cssHeight = [ "Top", "Bottom" ];
+    var emptyArray = [], document = window.document, root = this, slice = emptyArray.slice, cssWidth = [ "Left", "Right" ], cssHeight = [ "Top", "Bottom" ];
     Querys = function(selector, context) {
         var queryfind = function() {
             var snack = /(?:[\*\w\-\\.#]+)+(?:\[(?:[\w\-_][^=]+)=(?:[\'\[\]\w\-_]+)\])*|\*|>/gi, exprClassName = /^(?:[\w\-_]+)?\.([\w\-_]+)/, exprId = /^(?:[\w\-_]+)?#([\w\-_]+)/, exprNodeName = /^([\w\*\-_]+)/, na = [ null, null, null ];
@@ -129,11 +129,60 @@
         }();
         this.elements = typeof selector == "string" ? queryfind(selector, context) :[ selector ];
     };
-    jeQuery.each = function(arr, fn) {
-        for (var i = 0; i < arr.length; i++) {
-            if (fn(i, arr[i]) === false) break;
-        }
+	function isType(type){
+		return function(obj){
+			return Object.prototype.toString.call(obj) == "[object "+ type +"]";
+		}
+	}
+	jeQuery.isObject = isType('Object');
+	jeQuery.isString = isType('String');
+	jeQuery.isNumber = isType('Number');
+	jeQuery.isArray = isType('Array');
+	jeQuery.isFunction = isType('Function');
+	jeQuery.isRegExp = isType('RegExp');
+	jeQuery.isNull = function(obj){ return obj === null; }
+	jeQuery.isUndefined = function(obj){ return obj === void 0; }
+	jeQuery.isElement = function(obj){ return !!obj && obj.nodeType === 1; }
+	jeQuery.isWindow = function(obj){ return obj && jeQuery.isObject(obj) && 'location' in obj; }
+    jeQuery.each = function(object, callback) {
+		if (object === null)  return; // 终止执行
+		// 遍历数组,在每一项上调用回调函数
+		if (jeQuery.isArray(object)) {
+			var i, len;
+			for (i = 0, len = object.length; i < len; i++) {
+				if(typeof callback === "function") {
+					if (callback.call(object[i], i, object[i]) === false)  break;
+				}
+			}
+		// 遍历对象,在每个属性上调用回调函数
+		} else if (jeQuery.isObject(object)) {
+			if (typeof callback === "function") {
+				for (var k in object) {
+					if (callback.call(object[k], k, object[k]) === false)  break; 
+				}		
+			}
+		}
     };
+	jeQuery.makeArray = function( source, target ){
+		target = target || [];
+		var i = 0, len = source.length;
+
+		if( source !== null && source !== undefined ){
+			if(jeQuery.isArray(source) && jeQuery.isArray(target) && !target.length ){
+				return source;
+			}    
+
+		if( typeof len !== 'number' ||  typeof source === 'string' ||  jeQuery.isFunction(source) ||  source === window || source.tagName && rSelectForm.test(source.tagName) ){
+				target[ target.length++ ] = source;
+			}else{
+				for( ; i < len; i++ ){
+					target[ target.length++ ] = source[i];
+				}
+			}
+		}
+
+		return target;
+	}
     jeQuery.extend = function() {
         var _extend = function me(dest, source) {
             for (var name in dest) {
@@ -185,7 +234,7 @@
             return this;
         },
         css:function(key, value) {
-            if (typeof key === "string" && typeof value == "string") {
+            if (jeQuery.isString(key) && jeQuery.isString(value)) {
                 this.each(function() {
                     this.style[key] = value;
                 });
@@ -206,7 +255,7 @@
             return this;
         },
         index:function() {
-            var children = this.elements[0].parentNode.children;
+            var children = this.elements[0].parentNode.children || this.elements[0].parentNode.childNodes;
             for (var i = 0; i < children.length; i++) {
                 if (this.elements[0] == children[i]) return i;
             }
@@ -243,10 +292,28 @@
         },
         val:function(value) {
             for (var i = 0; i < this.elements.length; i++) {
-                if (value !== undefined && this.elements[i].nodeType === 1) {
-                    this.elements[i].value = value;
+				var el = this.elements[i];
+                if (value !== undefined && el.nodeType === 1) {
+					switch(el.tagName){
+						case 'SELECT':
+							el.options[el.selectedIndex].value = val;
+							return el;
+							break;
+						case 'INPUT': case 'TEXTAREA':
+							el.value = val;
+							return el;
+							break;
+					}
                 } else {
-                    return this.elements[i].value;
+					switch(el.tagName){
+						case 'SELECT':
+							var value = el.options[el.selectedIndex].value;
+							return value;
+							break;
+						case 'INPUT': case 'TEXTAREA':
+							return el.value;
+							break;
+					}
                 }
             }
             return this;
@@ -264,10 +331,38 @@
                 1 === this.nodeType && this.removeAttribute(name);
             });
         },
+		data : function(name, value){
+			var attrName = 'data-' + name.replace(/([A-Z])/g, '-$1').toLowerCase();
+			var data = (1 in arguments) ? this.attr(attrName, value) : this.attr(attrName);
+			var lizeValue = function(value) {
+			  try {
+				  return value ? value == "true" || ( value == "false" ? false : value == "null" ? null : +value + "" == value ? +value : /^[\[\{]/.test(value) ? JSON.parse(value) : value )  : value
+			  } catch(e) {
+				  return value
+			  }
+			}
+			return data !== null ? lizeValue(data) : undefined;	
+		},
         find:function(selector) {
-            var context = this.elements[0];
-            return jeQuery(selector, context);
+			if (!selector) return;
+			for (var i = 0; i < this.elements.length; i++) {
+            var context = this.elements[i];  //alert(jeQuery(selector, context).size())
+			return jeQuery(selector, context); 
+			}
         },
+		children : function(value){
+			var pEl = value == undefined ? this.elements[0] : jeQuery(value, this.elements[0]);
+			var els = pEl.children || pEl.childNodes, len = els.length, ret = [], i = 0;
+			if(pEl.nodeType === 1){
+				
+				for (; i < len; i++){
+					//return jeQuery(els[i]); 
+					if (els[i].nodeType == 1) return els[i];
+				};
+				//return ret;
+			}
+			return els;
+		},
         //阻止事件默认行为
         stopPropagation:function(event) {
             event = event || window.event;
@@ -276,10 +371,10 @@
         },
         //hover事件
         hover:function(fnOver, fnOut) {
-            for (var i = 0; i < this.elements.length; i++) {
-                addEvent(this.elements[i], "mouseover", fnOver);
-                addEvent(this.elements[i], "mouseout", fnOut);
-            }
+            this.each(function() {
+                addEvent(this, "mouseover", fnOver);
+                addEvent(this, "mouseout", fnOut);
+            })
             return this;
         },
         //on事件
@@ -312,30 +407,37 @@
         addClass:function(cls) {
             var that = this;
             this.each(function() {
-                that.hasClass(cls) || (this.className += " " + cls);
-                this.className = this.className.replace(/^\s|\s$/g, "").replace(/\s+/g, " ");
+			   this.className += " " + cls
+			   if (!that.hasClass(cls)){ 
+			        this.className = this.className.replace(/^\s|\s$/g, "").replace(/\s+/g, " ");
+			   };
             });
             return this;
         },
+        //删除样式
+        removeClass:function(cls) {
+			this.each(function() {
+				if (this.className.match(new RegExp('(\\s|^)'+cls+'(\\s|$)'))) {
+					this.className=this.className.replace(new RegExp('(\\s|^)'+cls+'(\\s|$)'),'');
+				};
+			});
+            return this;
+        },
+		remove: function() { //只能删除自身
+			this.each(function() {
+				this.parentNode.removeChild(this);
+			})
+			return this;
+		},
         offset:function() {
             if (this.size() == 0) return null;
             var obj = this.elements[0].getBoundingClientRect();
-            return {
+            return { 
                 left:obj.left + window.pageXOffset,
                 top:obj.top + window.pageYOffset,
                 width:obj.width,
                 height:obj.height
             };
-        },
-        //删除样式
-        removeClass:function(cls) {
-            var that = this;
-            this.each(function() {
-                if (that.hasClass(cls)) {
-                    this.className = this.className.replace(new RegExp("(\\s|^)" + cls + "(\\s|$)"), "");
-                }
-            });
-            return this;
         }
     };
     jeQuery.each([ "append", "prepend", "before", "after" ], function(i, name) {
@@ -359,9 +461,9 @@
         jeQuery.fn[name] = function(value) {
             for (var s = 0; s < this.elements.length; s++) {
                 if (value == undefined) {
-                    return getWH(this.elements[s], name);
+                    return getOffset(this.elements[s], name);
                 } else {
-                    this.css(name, value);
+                    this.css(name, typeof value === 'number' ? value+'px' : value);
                 }
             }
         };
@@ -418,7 +520,7 @@
         }
         return false;
     };
-    function getWH(el, name, extra) {
+    function getOffset(el, name, extra) {
         var val = name === "width" ? el.offsetWidth :el.offsetHeight, which = name === "width" ? cssWidth :cssHeight;
         if (val > 0) {
             if (extra !== "border") {
