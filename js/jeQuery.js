@@ -129,60 +129,48 @@
         }();
         this.elements = typeof selector == "string" ? queryfind(selector, context) :[ selector ];
     };
-	function isType(type){
-		return function(obj){
-			return Object.prototype.toString.call(obj) == "[object "+ type +"]";
-		}
-	}
-	jeQuery.isObject = isType('Object');
-	jeQuery.isString = isType('String');
-	jeQuery.isNumber = isType('Number');
-	jeQuery.isArray = isType('Array');
-	jeQuery.isFunction = isType('Function');
-	jeQuery.isRegExp = isType('RegExp');
-	jeQuery.isNull = function(obj){ return obj === null; }
-	jeQuery.isUndefined = function(obj){ return obj === void 0; }
-	jeQuery.isElement = function(obj){ return !!obj && obj.nodeType === 1; }
-	jeQuery.isWindow = function(obj){ return obj && jeQuery.isObject(obj) && 'location' in obj; }
-    jeQuery.each = function(object, callback) {
-		if (object === null)  return; // 终止执行
-		// 遍历数组,在每一项上调用回调函数
-		if (jeQuery.isArray(object)) {
-			var i, len;
-			for (i = 0, len = object.length; i < len; i++) {
-				if(typeof callback === "function") {
-					if (callback.call(object[i], i, object[i]) === false)  break;
-				}
-			}
-		// 遍历对象,在每个属性上调用回调函数
-		} else if (jeQuery.isObject(object)) {
-			if (typeof callback === "function") {
-				for (var k in object) {
-					if (callback.call(object[k], k, object[k]) === false)  break; 
-				}		
-			}
-		}
+    function isType(type) {
+        return function(obj) {
+            return Object.prototype.toString.call(obj) == "[object " + type + "]";
+        };
+    }
+    jeQuery.isObject = isType("Object");
+    jeQuery.isString = isType("String");
+    jeQuery.isNumber = isType("Number");
+    jeQuery.isArray = isType("Array");
+    jeQuery.isFunction = isType("Function");
+    jeQuery.isRegExp = isType("RegExp");
+    jeQuery.isNull = function(obj) {
+        return obj === null;
     };
-	jeQuery.makeArray = function( source, target ){
-		target = target || [];
-		var i = 0, len = source.length;
-
-		if( source !== null && source !== undefined ){
-			if(jeQuery.isArray(source) && jeQuery.isArray(target) && !target.length ){
-				return source;
-			}    
-
-		if( typeof len !== 'number' ||  typeof source === 'string' ||  jeQuery.isFunction(source) ||  source === window || source.tagName && rSelectForm.test(source.tagName) ){
-				target[ target.length++ ] = source;
-			}else{
-				for( ; i < len; i++ ){
-					target[ target.length++ ] = source[i];
-				}
-			}
-		}
-
-		return target;
-	}
+    jeQuery.isUndefined = function(obj) {
+        return obj === void 0;
+    };
+    jeQuery.isElement = function(obj) {
+        return !!obj && obj.nodeType === 1;
+    };
+    jeQuery.isWindow = function(obj) {
+        return obj && jeQuery.isObject(obj) && "location" in obj;
+    };
+    jeQuery.each = function(object, callback) {
+        if (object === null) return;
+        // 终止执行
+        // 遍历数组,在每一项上调用回调函数
+        if (jeQuery.isArray(object)) {
+            var i, len;
+            for (i = 0, len = object.length; i < len; i++) {
+                if (typeof callback === "function") {
+                    if (callback.call(object[i], i, object[i]) === false) break;
+                }
+            }
+        } else if (jeQuery.isObject(object)) {
+            if (typeof callback === "function") {
+                for (var k in object) {
+                    if (callback.call(object[k], k, object[k]) === false) break;
+                }
+            }
+        }
+    };
     jeQuery.extend = function() {
         var _extend = function me(dest, source) {
             for (var name in dest) {
@@ -292,28 +280,32 @@
         },
         val:function(value) {
             for (var i = 0; i < this.elements.length; i++) {
-				var el = this.elements[i];
+                var el = this.elements[i];
                 if (value !== undefined && el.nodeType === 1) {
-					switch(el.tagName){
-						case 'SELECT':
-							el.options[el.selectedIndex].value = val;
-							return el;
-							break;
-						case 'INPUT': case 'TEXTAREA':
-							el.value = val;
-							return el;
-							break;
-					}
+                    switch (el.tagName) {
+                      case "SELECT":
+                        el.options[el.selectedIndex].value = val;
+                        return el;
+                        break;
+
+                      case "INPUT":
+                      case "TEXTAREA":
+                        el.value = val;
+                        return el;
+                        break;
+                    }
                 } else {
-					switch(el.tagName){
-						case 'SELECT':
-							var value = el.options[el.selectedIndex].value;
-							return value;
-							break;
-						case 'INPUT': case 'TEXTAREA':
-							return el.value;
-							break;
-					}
+                    switch (el.tagName) {
+                      case "SELECT":
+                        var value = el.options[el.selectedIndex].value;
+                        return value;
+                        break;
+
+                      case "INPUT":
+                      case "TEXTAREA":
+                        return el.value;
+                        break;
+                    }
                 }
             }
             return this;
@@ -331,38 +323,37 @@
                 1 === this.nodeType && this.removeAttribute(name);
             });
         },
-		data : function(name, value){
-			var attrName = 'data-' + name.replace(/([A-Z])/g, '-$1').toLowerCase();
-			var data = (1 in arguments) ? this.attr(attrName, value) : this.attr(attrName);
-			var lizeValue = function(value) {
-			  try {
-				  return value ? value == "true" || ( value == "false" ? false : value == "null" ? null : +value + "" == value ? +value : /^[\[\{]/.test(value) ? JSON.parse(value) : value )  : value
-			  } catch(e) {
-				  return value
-			  }
-			}
-			return data !== null ? lizeValue(data) : undefined;	
-		},
-        find:function(selector) {
-			if (!selector) return;
-			for (var i = 0; i < this.elements.length; i++) {
-            var context = this.elements[i];  //alert(jeQuery(selector, context).size())
-			return jeQuery(selector, context); 
-			}
+        data:function(name, value) {
+            var attrName = "data-" + name.replace(/([A-Z])/g, "-$1").toLowerCase();
+            var data = 1 in arguments ? this.attr(attrName, value) :this.attr(attrName);
+            var lizeValue = function(value) {
+                try {
+                    return value ? value == "true" || (value == "false" ? false :value == "null" ? null :+value + "" == value ? +value :/^[\[\{]/.test(value) ? JSON.parse(value) :value) :value;
+                } catch (e) {
+                    return value;
+                }
+            };
+            return data !== null ? lizeValue(data) :undefined;
         },
-		children : function(value){
-			var pEl = value == undefined ? this.elements[0] : jeQuery(value, this.elements[0]);
-			var els = pEl.children || pEl.childNodes, len = els.length, ret = [], i = 0;
-			if(pEl.nodeType === 1){
-				
-				for (; i < len; i++){
-					//return jeQuery(els[i]); 
-					if (els[i].nodeType == 1) return els[i];
-				};
-				//return ret;
-			}
-			return els;
-		},
+        find:function(selector) {
+            if (!selector) return;
+            for (var i = 0; i < this.elements.length; i++) {
+                var context = this.elements[i];
+                //alert(jeQuery(selector, context).size())
+                return jeQuery(selector, context);
+            }
+        },
+        children:function(value) {
+            var pEl = value == undefined ? this.elements[0] :jeQuery(value, this.elements[0]);
+            var els = pEl.children || pEl.childNodes, len = els.length, ret = [], i = 0;
+            if (pEl.nodeType === 1) {
+                for (;i < len; i++) {
+                    //return jeQuery(els[i]); 
+                    if (els[i].nodeType == 1) return els[i];
+                }
+            }
+            return els;
+        },
         //阻止事件默认行为
         stopPropagation:function(event) {
             event = event || window.event;
@@ -374,7 +365,7 @@
             this.each(function() {
                 addEvent(this, "mouseover", fnOver);
                 addEvent(this, "mouseout", fnOut);
-            })
+            });
             return this;
         },
         //on事件
@@ -407,32 +398,33 @@
         addClass:function(cls) {
             var that = this;
             this.each(function() {
-			   this.className += " " + cls
-			   if (!that.hasClass(cls)){ 
-			        this.className = this.className.replace(/^\s|\s$/g, "").replace(/\s+/g, " ");
-			   };
+                this.className += " " + cls;
+                if (!that.hasClass(cls)) {
+                    this.className = this.className.replace(/^\s|\s$/g, "").replace(/\s+/g, " ");
+                }
             });
             return this;
         },
         //删除样式
         removeClass:function(cls) {
-			this.each(function() {
-				if (this.className.match(new RegExp('(\\s|^)'+cls+'(\\s|$)'))) {
-					this.className=this.className.replace(new RegExp('(\\s|^)'+cls+'(\\s|$)'),'');
-				};
-			});
+            this.each(function() {
+                if (this.className.match(new RegExp("(\\s|^)" + cls + "(\\s|$)"))) {
+                    this.className = this.className.replace(new RegExp("(\\s|^)" + cls + "(\\s|$)"), "");
+                }
+            });
             return this;
         },
-		remove: function() { //只能删除自身
-			this.each(function() {
-				this.parentNode.removeChild(this);
-			})
-			return this;
-		},
+        remove:function() {
+            //只能删除自身
+            this.each(function() {
+                this.parentNode.removeChild(this);
+            });
+            return this;
+        },
         offset:function() {
             if (this.size() == 0) return null;
             var obj = this.elements[0].getBoundingClientRect();
-            return { 
+            return {
                 left:obj.left + window.pageXOffset,
                 top:obj.top + window.pageYOffset,
                 width:obj.width,
@@ -449,10 +441,21 @@
                     fragment.appendChild(nodes[n]);
                 }
                 switch (name) {
-                  case "append": elems.appendChild(fragment);  break;
-                  case "prepend":  elems.insertBefore(fragment, elems.firstChild); break;
-                  case "before":  elems.parentNode.insertBefore(fragment, elems); break;
-                  case "after":  elems.parentNode.insertBefore(fragment, elems.nextSibling); break;
+                  case "append":
+                    elems.appendChild(fragment);
+                    break;
+
+                  case "prepend":
+                    elems.insertBefore(fragment, elems.firstChild);
+                    break;
+
+                  case "before":
+                    elems.parentNode.insertBefore(fragment, elems);
+                    break;
+
+                  case "after":
+                    elems.parentNode.insertBefore(fragment, elems.nextSibling);
+                    break;
                 }
             }
         };
@@ -463,7 +466,7 @@
                 if (value == undefined) {
                     return getOffset(this.elements[s], name);
                 } else {
-                    this.css(name, typeof value === 'number' ? value+'px' : value);
+                    this.css(name, typeof value === "number" ? value + "px" :value);
                 }
             }
         };
@@ -492,7 +495,7 @@
             obj["on" + type] = addEvent.exec;
         }
     }
-    addEvent.fixEvent=function(event) {
+    addEvent.fixEvent = function(event) {
         if (event.target) return event;
         var event2 = {
             target:event.srcElement || document,
@@ -506,12 +509,12 @@
         // IE6/7/8 在原生window.event对象写入数据会导致内存无法回收，应当采用拷贝
         for (var i in event) event2[i] = event[i];
         return event2;
-    }
+    };
     //执行事件处理函数
     addEvent.exec = function(event) {
         var e = event || addEvent.fixEvent(window.event);
         var es = this.events[e.type];
-        for (var i in es)  es[i].call(this, e);
+        for (var i in es) es[i].call(this, e);
     };
     //同一个注册函数进行屏蔽
     addEvent.equal = function(es, fn) {
