@@ -10,7 +10,7 @@
 ### 基础选择器
 
 * $(selector) 或 Je(selector) 或 jeQuery(selector)
-支持(tag), (#id), (.className) ,(tag > .className) ,(tag > tag) ,(#id > tag.className) , (.className tag) ,(tag, tag, #id) ,(tag#id.className) ,(span > * > b) ,(input[name=radio])的传入，不支持伪类，返回Je对象。
+* 支持(tag), (#id), (.className) ,(tag > .className) ,(tag > tag) ,(#id > tag.className) , (.className tag) ,(tag, tag, #id) ,(tag#id.className) ,(span > * > b) ,(input[name=radio])的传入，不支持伪类，返回Je对象。
 
 * .eq(index)
 
