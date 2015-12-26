@@ -297,6 +297,8 @@ DOM文档加载完毕执行，不同于onload，不包括加载完图片等。�
 * $.isEmptyObject(param)
 
 判断传入的参数是否为空对象，没判断继承的属性。
+
+
 **查看演示**
 
 * [查看框架演示](http://singod.github.io/jeQuery/)  
