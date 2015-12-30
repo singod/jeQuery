@@ -233,7 +233,7 @@ if (document.all && window.external) {
                 return callback.call(elem, i, elem);
             }));
         },
-        // 删除节点(update at 2013.03.25)
+        // 删除节点
         remove:function() {
             var len = this.length;
             var removes = function(elem) {
@@ -300,7 +300,7 @@ if (document.all && window.external) {
             return new Date().getTime();
         },
         expando:"je" + Math.random().toString(36).substr(2),
-        // 获取数据索引(update at 2013.03.18)
+        // 获取数据索引
         getCacheIndex:function(elem, isSet) {
             var id = Je.expando;
             if (elem.nodeType === 1) {
@@ -392,7 +392,7 @@ if (document.all && window.external) {
             }
             return obj;
         },
-        // 读取/缓存数据操作(update at 2013.03.27)
+        // 读取/缓存数据操作
         readData:function(elem, type, name, value, overwrite) {
             var cache = Je.cache, isRead = typeof value === "undefined" ? true :false, index = Je.getCacheIndex(elem, !isRead);
             if (isRead) {
@@ -403,7 +403,7 @@ if (document.all && window.external) {
             if (overwrite || typeof cache[type][name] === "undefined") cache[type][name] = value;
             return cache[type][name];
         },
-        // 删除数据操作(update at 2013.03.18)
+        // 删除数据操作
         removeData:function(elem, type, name) {
             var data, cache = Je.cache, index = Je.getCacheIndex(elem);
             if (index && (data = cache[index])) {
@@ -413,7 +413,7 @@ if (document.all && window.external) {
                 if (Je.isEmptyObject(data[type])) delete data[type];
             }
         },
-        // 过滤选择器(update 2013.03.14)
+        // 过滤选择器
         filter:function(selector, elems) {
             var rQuickExpr = /^(?:#([\w-]+)|(\w+)|\.([\w-]+))$/, rTagClass = /^(?:(\w*)\.([\w-]+))$/;
             var match = rQuickExpr.exec(selector), m, tag, i = 0, len = elems.length, rets = [];
@@ -447,7 +447,7 @@ if (document.all && window.external) {
             }
             return rets;
         },
-        // 筛选节点(add 2013.02.25)
+        // 筛选节点
         dir:function(elem, dir, besides, one) {
             var matched = [], cur = elem;
             while (cur && cur.nodeType !== 9) {
@@ -478,7 +478,7 @@ if (document.all && window.external) {
             }
             return -1;
         },
-        // 清除数组中重复的数据(update at 2013.02.28)
+        // 清除数组中重复的数据
         uniq:function(arr) {
             var rets = [], i = 0, len = arr.length;
             if (Je.isArray(arr)) {
@@ -548,7 +548,7 @@ if (document.all && window.external) {
         }
     });
     Je.extend({
-        // 解析json(update at 2013.04.01)
+        // 解析json
         parseJSON:function(data) {
             if (window.JSON && window.JSON.parse) {
                 return window.JSON.parse(data);
@@ -566,7 +566,7 @@ if (document.all && window.external) {
             }
             Je.error("Invalid JSON: " + data);
         },
-        // 解析字符串为dom节点(update 2013.04.17)
+        // 解析字符串为dom节点
         parseNodes:function(data) {
             var wrap = document.createElement("div"), rets = [], cur;
             wrap.innerHTML = data;
@@ -578,7 +578,7 @@ if (document.all && window.external) {
             wrap = null;
             return rets;
         },
-        // 返回节点集合(update 2013.04.17)
+        // 返回节点集合
         buildFragment:function(nodes) {
             var frag = document.createDocumentFragment(), i = 0, len = nodes.length;
             for (;i < len; i++) {
@@ -598,7 +598,7 @@ if (document.all && window.external) {
         propFix[this.toLowerCase()] = this;
     });
     Je.fn.extend({
-        // 对应元素读取或写入缓存数据(add at 2013.04.22)
+        // 对应元素读取或写入缓存数据
         readData:function(name, value) {
             if (typeof value === "undefined") {
                 return Je.readData(this[0], "readData", name);
@@ -607,7 +607,7 @@ if (document.all && window.external) {
                 Je.readData(this, "readData", name, value, true);
             });
         },
-        // 对应元素删除缓存数据(add at 2013.04.22)
+        // 对应元素删除缓存数据
         removeData:function(name) {
             return Je.each(this, function() {
                 Je.removeData(this, "readData", name);
@@ -621,19 +621,19 @@ if (document.all && window.external) {
             }
             return false;
         },
-        // 添加Class(update at 2013.02.19)
+        // 添加Class
         addClass:function(className) {
             return Je.each(this, function() {
                 if (this.nodeType === 1 && !Je(this).hasClass(className)) this.className = Je.trim(this.className + " " + className + " ");
             });
         },
-        // 删除Class(update at 2013.02.19)
+        // 删除Class
         removeClass:function(className) {
             return Je.each(this, function() {
                 if (this.nodeType === 1) this.className = Je.trim((" " + this.className + " ").replace(" " + className + " ", " "));
             });
         },
-        // 添加删除样式(add at 2013.04.25)
+        // 添加删除样式
         toggleClass:function(className, state) {
             return Je.each(this, function() {
                 if (typeof state !== "boolean") state = !Je(this).hasClass(className);
@@ -705,7 +705,7 @@ if (document.all && window.external) {
                 if (this.nodeType === 1) this.setAttribute(name, value);
             });
         },
-        // 删除元素指定Attribute属性(update at 2013.06.07)
+        // 删除元素指定Attribute属性
         removeAttr:function(name) {
             return Je.each(this, function() {
                 if (this.nodeType === 1) {
@@ -729,7 +729,7 @@ if (document.all && window.external) {
             };
             return data !== null ? lizeValue(data) :undefined;
         },
-        // 读取或设置元素Property属性处理(update at 2013.06.07)
+        // 读取或设置元素Property属性处理
         prop:function(name, value) {
             name = propFix[name] || name;
             if (typeof value === "undefined") return this[0][name];
@@ -737,14 +737,14 @@ if (document.all && window.external) {
                 this[name] = value;
             });
         },
-        // 删除元素指定Property属性(update at 2013.06.07)
+        // 删除元素指定Property属性
         removeProp:function(name) {
             name = propFix[name] || name;
             return Je.each(this, function() {
                 delete this[name];
             });
         },
-        // 获取指定子元素(update at 2013.03.14)
+        // 获取指定子元素
         children:function(selector) {
             var elems, i = 0, len = this.length, rets = [];
             for (;i < len; i++) {
@@ -758,7 +758,7 @@ if (document.all && window.external) {
             rets = Je.uniq(rets);
             return this.pushStack(rets);
         },
-        // 获取所有子节点(update at 2013.04.22)
+        // 获取所有子节点
         contents:function() {
             var elems, i = 0, len = this.length, rets = [];
             for (;i < len; i++) {
@@ -768,20 +768,20 @@ if (document.all && window.external) {
             rets = Je.uniq(rets);
             return this.pushStack(rets);
         },
-        // 读取设置节点内容(update at 2013.03.25)
+        // 读取设置节点内容
         html:function(value) {
             return typeof value === "undefined" ? this[0] && this[0].nodeType === 1 ? this[0].innerHTML :undefined :typeof value !== "undefined" && value == true ? this[0] && this[0].nodeType === 1 ? this[0].outerHTML :undefined :Je.each(this, function() {
                 this.innerHTML = value;
             });
         },
-        // 读取设置节点文本内容(update at 2013.04.22)
+        // 读取设置节点文本内容
         text:function(value) {
             var innText = document.all ? "innerText" :"textContent";
             return typeof value === "undefined" ? this[0] && this[0].nodeType === 1 ? this[0][innText] :undefined :Je.each(this, function() {
                 this[innText] = value;
             });
         },
-        // 读取设置表单元素的值(update at 2013.06.08)
+        // 读取设置表单元素的值
         val:function(value) {
             if (typeof value === "undefined") {
                 return this[0] && this[0].nodeType === 1 && typeof this[0].value !== "undefined" ? this[0].value :undefined;
@@ -798,7 +798,7 @@ if (document.all && window.external) {
             return this.html("");
         }
     });
-    // 判断Dom载完(update at 2013.05.09)
+    // 判断Dom载完
     var readyList = [], readyBound = false, completed = function(event) {
         if (document.addEventListener || event.type === "load" || document.readyState === "complete") {
             readyDetach();
