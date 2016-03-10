@@ -37,7 +37,7 @@ if (document.all && window.external) {
             if (selector.indexOf(",") > -1) {
                 var split = selector.split(/,/g), ret = [], sIndex = 0, len = split.length;
                 for (;sIndex < len; ++sIndex) {
-                    ret = ret.concat(_find(split[sIndex], context));
+                    ret = ret.concat(retSelector(split[sIndex], context));
                 }
                 return unique(ret);
             }
@@ -140,9 +140,10 @@ if (document.all && window.external) {
                 this.context = this[0] = selector;
                 this.length = 1;
                 return this;
-            } else if (selector === "body" && context.body) {
-                this[0] = context.body;
-                return this;
+            } else if (selector === 'body' && !context && document.body) {
+				this[0] = document.body;
+				this.length = 1;
+				return this;
             } else if (selector === window) {
                 this[this.length++] = selector;
                 return this;
@@ -153,7 +154,7 @@ if (document.all && window.external) {
                     context = document;
                 }
                 //如果是html
-                if (selector[0] === "<" && selector[selector.length - 1] === ">") {
+                if (selector.charAt(0) === '<' && selector.charAt(selector.length - 1) === '>' && selector.length >= 3) {
                     var tmpEl = document.createElement("div");
                     tmpEl.innerHTML = selector;
                     //不用children,须保留文本节点
@@ -193,8 +194,8 @@ if (document.all && window.external) {
             obj.length = len;
             return obj;
         },
-        each:function(callback, args) {
-            return Je.each(this, callback, args);
+        each:function(callback) {
+            return Je.each(this, callback);
         },
         eq:function(i) {
             i = +i;
@@ -204,14 +205,10 @@ if (document.all && window.external) {
             var match, i = 0, obj, len = this.length, rets = [];
             match = rMultiSelector.exec(selector);
             if (match && match[1]) {
-                for (;i < len; i++) {
-                    rets = Je.merge(rets, querySelector(match[1], this[i]));
-                }
+                for (;i < len; i++) rets = Je.merge(rets, querySelector(match[1], this[i]));
             }
             // 父集为多个节点时需要排重
-            if (len > 1 && rets[1]) {
-                rets = Je.uniq(rets);
-            }
+            if (len > 1 && rets[1]) rets = Je.uniq(rets);
             obj = this.pushStack(rets);
             // 还有后代节点继续遍历
             if (obj.length > 0 && match[2] && match[3]) {
@@ -233,6 +230,12 @@ if (document.all && window.external) {
                 return callback.call(elem, i, elem);
             }));
         },
+		is: function(selector) {
+			var POS = /:(nth|eq|gt|lt|first|last|even|odd)(?:\((\d*)\))?(?=[^\-]|$)/;
+		    return !!selector && ( typeof selector === "string" ?
+				POS.test( selector ) ? Je( selector, this.context ).index( this[0] ) >= 0 : Je.filter( selector, this ).length > 0 :
+				this.pushStack( selector ).length > 0 );
+	    },
         // 删除节点
         remove:function() {
             var len = this.length;
@@ -296,9 +299,6 @@ if (document.all && window.external) {
         },
         guid:1,
         cache:{},
-        now:function() {
-            return new Date().getTime();
-        },
         expando:"je" + Math.random().toString(36).substr(2),
         // 获取数据索引
         getCacheIndex:function(elem, isSet) {
@@ -350,29 +350,17 @@ if (document.all && window.external) {
             for (key in obj) {}
             return key === undefined || core_hasOwn.call(obj, key);
         },
-        each:function(obj, callback, args) {
+        each:function(obj, callback) {
             var name, i = 0, length = obj.length, isObj = length === undefined || Je.isFunction(obj);
-            if (args) {
-                if (isObj) {
-                    for (name in obj) {
-                        if (callback.apply(obj[name], args) === false) break;
-                    }
-                } else {
-                    for (;i < length; ) {
-                        if (callback.apply(obj[i++], args) === false) break;
-                    }
-                }
-            } else {
-                if (isObj) {
-                    for (name in obj) {
-                        if (callback.call(obj[name], name, obj[name]) === false) break;
-                    }
-                } else {
-                    for (;i < length; ) {
-                        if (callback.call(obj[i], i, obj[i++]) === false) break;
-                    }
-                }
-            }
+			if (isObj) {
+				for (name in obj) {
+					if (callback.call(obj[name], name, obj[name]) === false) break;
+				}
+			} else {
+				for (;i < length; ) {
+					if (callback.call(obj[i], i, obj[i++]) === false) break;
+				}
+			}
             return obj;
         },
         trim:function(text) {
@@ -530,21 +518,6 @@ if (document.all && window.external) {
                 if (b === a) return true;
             }
             return false;
-        },
-        proxy:function(fn, context) {
-            var tmp, args, proxy;
-            if (typeof context === "string") {
-                tmp = fn[context];
-                context = fn;
-                fn = tmp;
-            }
-            if (!Je.isFunction(fn)) return undefined;
-            args = core_slice.call(arguments, 2);
-            proxy = function() {
-                return fn.apply(context, args.concat(core_slice.call(arguments)));
-            };
-            proxy.guid = fn.guid = fn.guid || Je.guid++;
-            return proxy;
         }
     });
     Je.extend({
@@ -674,14 +647,19 @@ if (document.all && window.external) {
                 Je(this).css("display", "none");
             });
         },
+		//获取当前元素的坐标
+		position:function(){
+			if (this.size() == 0) return null;
+			var elem = this[0];
+			return { left:elem.offsetLeft, top:elem.offsetTop };
+		},
+		//获取当前document元素的坐标
         offset:function() {
             if (this.size() == 0) return null;
             var elem = this[0], box = elem.getBoundingClientRect(), doc = elem.ownerDocument, body = doc.body, docElem = doc.documentElement, clientTop = docElem.clientTop || body.clientTop || 0, clientLeft = docElem.clientLeft || body.clientLeft || 0, top = box.top + (self.pageYOffset || docElem.scrollTop) - clientTop, left = box.left + (self.pageXOffset || docElem.scrollLeft) - clientLeft;
-            return {
-                left:left,
-                top:top
-            };
+            return { left:left,  top:top  };
         },
+		//获取与设置，自定义属性
         attr:function(name, value) {
             var ret;
             if (typeof value === "undefined") {
@@ -813,8 +791,7 @@ if (document.all && window.external) {
             window.detachEvent("onload", completed);
         }
     }, readyAttach = function() {
-        var top = false;
-        readyBound = true;
+        var top = false; readyBound = true;
         if (document.readyState === "complete") {
             return Je.ready();
         } else if (document.addEventListener) {
@@ -944,17 +921,13 @@ if (document.all && window.external) {
         // 在元素之前插入内容
         before:function() {
             return this.domManip(arguments, function(elem) {
-                if (this.parentNode) {
-                    this.parentNode.insertBefore(elem, this);
-                }
+                if (this.parentNode)  this.parentNode.insertBefore(elem, this);
             });
         },
         // 在元素之后插入内容
         after:function() {
             return this.domManip(arguments, function(elem) {
-                if (this.parentNode) {
-                    this.parentNode.insertBefore(elem, this.nextSibling);
-                }
+                if (this.parentNode) this.parentNode.insertBefore(elem, this.nextSibling);
             });
         },
         replaceWith:function(value) {
@@ -991,14 +964,14 @@ if (document.all && window.external) {
         }
     });
     Je.each([ "width", "height" ], function(i, name) {
-        Je.fn[name] = function(value) {
-            return this.each(function() {
-                if (value == undefined) {
-                    return getWidthOrHeight(this, name);
-                } else {
-                    Je(this).css(name, typeof value === "number" ? value + "px" :value);
-                }
-            });
+        Je.fn[name] = function(value) {           
+			if (value == undefined) {
+				return getWidthOrHeight(this, name);
+			} else {
+				return this.each(function() {
+					 Je(this).css(name, typeof value === "number" ? value + "px" :value);
+				});
+			}          
         };
     });
     // 将样式属性转为驼峰式
@@ -1009,29 +982,30 @@ if (document.all && window.external) {
     }
     // 宽高属性单位auto转化
     function getWidthOrHeight(elem, name) {
-        var padding = name === "width" ? [ "left", "right" ] :[ "top", "bottom" ], ret = elem[camelCase("offset-" + name)];
+        var padding = name === "width" ? [ "left", "right" ] :[ "top", "bottom" ], ret = elem[0][camelCase("offset-" + name)];
         if (ret <= 0 || ret == null) {
-            ret = parseFloat(elem[camelCase("client-" + name)]) - parseFloat(Je(elem).css("padding-" + padding[0])) - parseFloat(Je(elem).css("padding-" + padding[1]));
+            ret = parseFloat(elem[0][camelCase("client-" + name)]) - parseFloat(Je(elem).css("padding-" + padding[0])) - parseFloat(Je(elem).css("padding-" + padding[1]));
         }
         return ret;
     }
-    function isDisconnected(node) {
-        return !node || !node.parentNode || node.parentNode.nodeType === 11;
-    }
+	function browserAgent() {
+		var ua = window.navigator.userAgent.toLowerCase(),
+			match,
+			browser = { ie: false, firefox: false, chrome: false,  webkit: false, safari: false,};
+			match = /(chrome)[ \/]([\w.]+)/.exec(ua) || /(webkit)[ \/]([\w.]+)/.exec(ua) || /ms(ie)\s([\w.]+)/.exec(ua) || /(firefox)[ \/]([\w.]+)/.exec(ua) || [];
+			if ( match[1] )  browser[ match[1] ] = true;
+			// 在PC端，webkit浏览器不是Chrome/Chromium就是Safari
+			if ( browser.webkit ) browser.safari = true;
+			if ( browser.chrome ) browser.webkit = true;
+		return browser;
+	};
+	Je.browser = browserAgent();
     rootJe = Je(document);
-    window.Je = window.$ = $ = Je;
+    
     // 支持amd和cmd
-    if (typeof define === "function") {
-        if (define.amd) {
-            define("Je", [], function() {
-                return Je;
-            });
-        } else if (define.cmd) {
-            define(function(require, exports, module) {
-                return Je;
-            });
-        }
-    }
+	"function" === typeof define ? define("Je", [], function () { 
+	    return Je; 
+	}) : ("object" === typeof module && "object" === typeof module.exports) ?  module.exports = Je : window.Je = window.$ = $ = Je;
 })(window);
 
 //各种触发事件
@@ -1179,7 +1153,8 @@ if (document.all && window.external) {
             return handler && (!event.e || handler.e == event.e) && (!func || handler.fn.toString() === func.toString()) && (!selector || handler.sel == selector);
         });
     }
-    var eventType = ("blur focus focusin focusout load resize scroll unload click dblclick " + "mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave " + "change select submit keydown keypress keyup error paste drop dragstart dragover " + "beforeunload").split(" ");
+	var addTouchs = (Je.browser.webkit || Je.browser.safari) ? "touchstart touchmove touchend" : "";
+    var eventType = ("blur focus focusin focusout load resize scroll unload click dblclick " + "mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave " + "change select submit keydown keypress keyup error paste drop dragstart dragover " + "beforeunload" + addTouchs).split(" ");
     Je.each(eventType, function(i, event) {
         Je.fn[event] = function(callback) {
             return callback ? this.bind(event, callback) :this.trigger(event);
