@@ -2,11 +2,10 @@
 * Je Javascript Class Library
 * @Author  chen guojun
 * @Contact https://github.com/singod/jeQuery
-* @Version 1.0.0
+* @Version 1.2.0
 */
-if (document.all && window.external) {
+(function(window, undefined) {
     Array.prototype.filter = function(fun) {
-        "use strict";
         if (void 0 === this || null === this) throw new TypeError();
         var t = Object(this), len = t.length >>> 0;
         if ("function" != typeof fun) throw new TypeError();
@@ -20,9 +19,6 @@ if (document.all && window.external) {
         for (var i = 0; i < this.length; i++) if (this[i] == obj) return i;
         return -1;
     };
-}
-
-(function(window, undefined) {
     var rootJe, document = window.document, docElem = document.documentElement, location = window.location, navigator = window.navigator, _Je = window.Je, _$ = window.$, core_push = Array.prototype.push, core_slice = Array.prototype.slice, core_indexOf = Array.prototype.indexOf, core_toString = Object.prototype.toString, core_hasOwn = Object.prototype.hasOwnProperty, core_trim = String.prototype.trim, core_pnum = /[\-+]?(?:\d*\.|)\d+(?:[eE][\-+]?\d+|)/.source, core_rnotwhite = /\S/, core_rspace = /\s+/, rtrim = /^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, rMultiSelector = /^(?:([\w-#\.]+)([\s]?)([\w-#\.\s>]*))$/, class2type = {};
     var rValidchars = /^[\],:{}\s]*$/, rValidbraces = /(?:^|:|,)(?:\s*\[)+/g, rValidescape = /\\(?:["\\\/bfnrt]|u[\da-fA-F]{4})/g, rValidtokens = /"[^"\\\r\n]*"|true|false|null|-?(?:\d+\.|)\d+(?:[eE][+-]?\d+|)/g;
     //选择器 (tag), (#id), (.className) ,(tag > .className) ,(tag > tag) ,(#id > tag.className) ,(.className tag) ,(tag, tag, #id) ,(tag#id.className) ,(span > * > b) ,(input[name=radio])
@@ -39,7 +35,7 @@ if (document.all && window.external) {
                 for (;sIndex < len; ++sIndex) {
                     ret = ret.concat(retSelector(split[sIndex], context));
                 }
-                return unique(ret);
+                return uniq(ret);
             }
             var parts = selector.match(snack), part = parts.pop(), id = (part.match(exprId) || na)[1], className = !id && (part.match(exprClassName) || na)[1], nodeName = !id && (part.match(exprNodeName) || na)[1], collection;
             var attrs = selector.match(/\[(?:[\w\-_][^=]+)=(?:[\'\[\]\w\-_]+)\]/g);
@@ -95,7 +91,7 @@ if (document.all && window.external) {
             }
             return selectorParts[0] && ret[0] ? filterParents(selectorParts, ret) :ret;
         }
-        var unique = function() {
+        var uniq = function() {
             var uid = +new Date();
             var data = function() {
                 var n = 1;
@@ -127,6 +123,17 @@ if (document.all && window.external) {
         }
         return retSelector;
     }();
+	var methodAttributes = ['val', 'css', 'html', 'text', 'data', 'width', 'height', 'offset']
+	fragmentRE = /^\s*<(\w+|!)[^>]*>/, singleTagRE = /^<(\w+)\s*\/?>(?:<\/\1>|)$/,
+	tagExpanderRE = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:]+)[^>]*)\/>/ig,
+	table = document.createElement('table'),
+	tableRow = document.createElement('tr'),
+	containers = {
+	  'tr': document.createElement('tbody'),
+	  'tbody': table, 'thead': table, 'tfoot': table,
+	  'td': tableRow, 'th': tableRow,
+	  '*': document.createElement('div')
+	}
     var Je = function(selector, context) {
         return new Je.fn.init(selector, context);
     };
@@ -140,33 +147,28 @@ if (document.all && window.external) {
                 this.context = this[0] = selector;
                 this.length = 1;
                 return this;
-            } else if (selector === 'body' && !context && document.body) {
-				this[0] = document.body;
-				this.length = 1;
-				return this;
-            } else if (selector === window) {
-                this[this.length++] = selector;
+            } else if (selector === "body" && !context && document.body) {
+                this.context = document;
+                this[0] = document.body;
+                this.selector = selector;
+                this.length = 1;
                 return this;
             } else if (typeof selector === "string") {
-                if (context && context.nodeType === 1) {
-                    this.context = context;
+				selector = Je.trim(selector);
+                //如果是html片段
+                if (selector[0] == "<" && fragmentRE.test(selector)) {
+                    var dom = Je.fragmentNode(selector, RegExp.$1, context), selector = null;
+                    return Je(this).pushStack(dom);
                 } else {
-                    context = document;
-                }
-                //如果是html
-                if (selector.charAt(0) === '<' && selector.charAt(selector.length - 1) === '>' && selector.length >= 3) {
-                    var tmpEl = document.createElement("div");
-                    tmpEl.innerHTML = selector;
-                    //不用children,须保留文本节点
-                    return Je(this).pushStack(tmpEl.childNodes);
-                } else {
-                    var selSize = querySelector(selector, context), rets = [];
+					(context && context.nodeType === 1) ? this.context = context : context = document;
+                    var selSize = querySelector(selector, context), dom = [];
                     for (var i = 0; i < selSize.length; i++) {
-                        rets.push(selSize[i]);
+						//(dom[i] = selSize[i])  =  (dom.push(selSize[i]))   //据说这样比push快
+                        dom[i] = selSize[i];
                     }
                     // 父集为多个节点时需要排重
-                    if (selSize.length > 1 && rets[1]) rets = Je.uniq(rets);
-                    return Je(this).pushStack(rets);
+                    if (selSize.length > 1 && dom[1]) dom = Je.unique(dom);
+                    return Je(this).pushStack(dom);
                 }
             } else if (Je.isFunction(selector)) {
                 return rootJe.ready(selector);
@@ -175,13 +177,22 @@ if (document.all && window.external) {
         },
         constructor:Je,
         selector:"",
-        version:"1.0.0",
+        je:"1.0.0",
         length:0,
         size:function() {
             return this.length;
         },
         toArray:function() {
-            return core_slice.call(this);
+			try{
+				return core_slice.call( this, 0 );
+			} catch(e){
+				var arr = [];
+				for(var i = 0,len = this.length; i < len; i++){
+					//arr.push(s[i]);
+					arr[i] = this[i];  //据说这样比push快
+				}
+				return arr;
+			}
         },
         get:function(num) {
             return num == null ? this.toArray() :num < 0 ? this[this.length + num] :this[num];
@@ -230,12 +241,19 @@ if (document.all && window.external) {
                 return callback.call(elem, i, elem);
             }));
         },
-		is: function(selector) {
-			var POS = /:(nth|eq|gt|lt|first|last|even|odd)(?:\((\d*)\))?(?=[^\-]|$)/;
-		    return !!selector && ( typeof selector === "string" ?
-				POS.test( selector ) ? Je( selector, this.context ).index( this[0] ) >= 0 : Je.filter( selector, this ).length > 0 :
-				this.pushStack( selector ).length > 0 );
-	    },
+        is:function(selector) {
+            var POS = /:(nth|eq|gt|lt|first|last|even|odd)(?:\((\d*)\))?(?=[^\-]|$)/;
+            return !!selector && (typeof selector === "string" ? POS.test(selector) ? Je(selector, this.context).index(this[0]) >= 0 :Je.filter(selector, this).length > 0 :this.pushStack(selector).length > 0);
+        },
+        index:function(elem) {
+            if (!elem) {
+                return this[0] && this[0].parentNode ? this.prevAll().length :-1;
+            }
+            if (typeof elem === "string") {
+                return Je.inArray(this[0], Je(elem));
+            }
+            return Je.inArray(elem.je ? elem[0] :elem, this);
+        },
         // 删除节点
         remove:function() {
             var len = this.length;
@@ -250,9 +268,7 @@ if (document.all && window.external) {
         slice:function() {
             return this.pushStack(core_slice.apply(this, arguments));
         },
-        push:core_push,
-        sort:[].sort,
-        splice:[].splice
+        push:core_push, sort:[].sort, splice:[].splice
     };
     Je.fn.init.prototype = Je.fn;
     Je.extend = Je.fn.extend = function() {
@@ -350,24 +366,25 @@ if (document.all && window.external) {
             for (key in obj) {}
             return key === undefined || core_hasOwn.call(obj, key);
         },
+		noop: function() {},
         each:function(obj, callback) {
             var name, i = 0, length = obj.length, isObj = length === undefined || Je.isFunction(obj);
-			if (isObj) {
-				for (name in obj) {
-					if (callback.call(obj[name], name, obj[name]) === false) break;
-				}
-			} else {
-				for (;i < length; ) {
-					if (callback.call(obj[i], i, obj[i++]) === false) break;
-				}
-			}
+            if (isObj) {
+                for (name in obj) {
+                    if (callback.call(obj[name], name, obj[name]) === false) break;
+                }
+            } else {
+                for (;i < length; ) {
+                    if (callback.call(obj[i], i, obj[i++]) === false) break;
+                }
+            }
             return obj;
         },
         trim:function(text) {
             return text.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, "");
         },
         create:function() {
-            var arg = arguments, obj = document.createElement(arg[0]), arr = arg[1];
+            var arg = arguments, obj = document.createElement(arg[0]), arr = arg[1] == document ? '' : arg[1];
             if (arr != undefined) {
                 arr = arr || {};
                 for (var k in arr) {
@@ -436,22 +453,30 @@ if (document.all && window.external) {
             return rets;
         },
         // 筛选节点
-        dir:function(elem, dir, besides, one) {
-            var matched = [], cur = elem;
-            while (cur && cur.nodeType !== 9) {
-                if (cur.nodeType === 1 && cur !== besides) {
-                    matched.push(cur);
-                    if (one) return matched;
-                }
+        dir:function(elem, dir, until) {
+            var matched = [], cur = elem[dir];
+            while (cur && cur.nodeType !== 9 && (until === undefined || cur.nodeType !== 1 || !Je(cur).is(until))) {
+                if (cur.nodeType === 1)  matched.push(cur);
                 cur = cur[dir];
             }
             return matched;
         },
-        makeArray:function(arr, results) {
-            var type, ret = results || [];
-            if (arr != null) {
-                type = Je.type(arr);
-                arr.length == null || type === "string" || type === "function" || type === "regexp" || Je.isWindow(arr) ? core_push.call(ret, arr) :Je.merge(ret, arr);
+        sibling:function(n, elem) {
+            var rets = [];
+            for (;n; n = n.nextSibling) {
+                if (n.nodeType === 1 && n !== elem) rets.push(n);
+            }
+            return rets;
+        },
+        makeArray:function(array, results) {
+            var ret = results || [];
+            if (array != null) {
+                var type = Je.type(array);
+                if (array.length == null || type === "string" || type === "function" || type === "regexp" || Je.isWindow(array)) {
+                    Array.prototype.push.call(ret, array);
+                } else {
+                    Je.merge(ret, array);
+                }
             }
             return ret;
         },
@@ -467,7 +492,7 @@ if (document.all && window.external) {
             return -1;
         },
         // 清除数组中重复的数据
-        uniq:function(arr) {
+        unique:function(arr) {
             var rets = [], i = 0, len = arr.length;
             if (Je.isArray(arr)) {
                 for (;i < len; i++) {
@@ -480,9 +505,9 @@ if (document.all && window.external) {
             throw new Error(msg);
         },
         merge:function(first, second) {
-            var sl = second.length, i = first.length, j = 0;
-            if (typeof sl === "number") {
-                for (;j < sl; j++) {
+            var i = first.length, j = 0;
+            if (typeof second.length === "number") {
+                for (var l = second.length; j < l; j++) {
                     first[i++] = second[j];
                 }
             } else {
@@ -521,14 +546,36 @@ if (document.all && window.external) {
         }
     });
     Je.extend({
+		// 返回片段节点
+		fragmentNode : function(html, name, properties) {
+			var dom, nodes, container, args = [], properties = properties || {};
+			if (singleTagRE.test(html)) dom = Je(document.createElement(RegExp.$1));
+			if (!dom) {
+				if (html.replace) html = html.replace(tagExpanderRE, "<$1></$2>");
+				if (name === undefined) name = fragmentRE.test(html) && RegExp.$1;
+				if (!(name in containers)) name = "*";
+				container = containers[name];
+				container.innerHTML = "" + html;
+				Je.each(container.childNodes, function(i,child) {
+					//(args[i] = child)  =  (args.push(child))   //据说这样比push快
+					args[i] = child; 
+				})
+				dom = Je.each(args, function() {
+					container.removeChild(this);
+				});
+			}
+			if (Je.isPlainObject(properties)) {
+				nodes = Je(dom);
+				Je.each(properties, function(key, value) {
+					if (methodAttributes.indexOf(key) > -1) nodes[key](value); else nodes.attr(key, value);
+				});
+			}
+			return dom;
+		},
         // 解析json
         parseJSON:function(data) {
-            if (window.JSON && window.JSON.parse) {
-                return window.JSON.parse(data);
-            }
-            if (data === null) {
-                return data;
-            }
+            if (window.JSON && window.JSON.parse) return window.JSON.parse(data);
+            if (data === null) return data;
             if (typeof data === "string") {
                 data = Je.trim(data);
                 if (data) {
@@ -647,19 +694,32 @@ if (document.all && window.external) {
                 Je(this).css("display", "none");
             });
         },
-		//获取当前元素的坐标
-		position:function(){
-			if (this.size() == 0) return null;
-			var elem = this[0];
-			return { left:elem.offsetLeft, top:elem.offsetTop };
-		},
-		//获取当前document元素的坐标
+        //获取当前元素的坐标
+        position:function() {
+            //没有对象
+            if (this.size() == 0) return null;
+            var ele = this[0], width = ele.offsetWidth, height = ele.offsetHeight, top = ele.offsetTop, left = ele.offsetLeft;
+            while (ele = ele.offsetParent) {
+                top += ele.offsetTop;
+                left += ele.offsetLeft;
+            }
+            return {
+                width:width,
+                height:height,
+                top:top,
+                left:left
+            };
+        },
+        //获取当前document元素的坐标
         offset:function() {
             if (this.size() == 0) return null;
             var elem = this[0], box = elem.getBoundingClientRect(), doc = elem.ownerDocument, body = doc.body, docElem = doc.documentElement, clientTop = docElem.clientTop || body.clientTop || 0, clientLeft = docElem.clientLeft || body.clientLeft || 0, top = box.top + (self.pageYOffset || docElem.scrollTop) - clientTop, left = box.left + (self.pageXOffset || docElem.scrollLeft) - clientLeft;
-            return { left:left,  top:top  };
+            return {
+                left:left,
+                top:top
+            };
         },
-		//获取与设置，自定义属性
+        //获取与设置，自定义属性
         attr:function(name, value) {
             var ret;
             if (typeof value === "undefined") {
@@ -722,20 +782,6 @@ if (document.all && window.external) {
                 delete this[name];
             });
         },
-        // 获取指定子元素
-        children:function(selector) {
-            var elems, i = 0, len = this.length, rets = [];
-            for (;i < len; i++) {
-                elems = Je.dir(this[i].firstChild, "nextSibling");
-                if (typeof selector === "string") {
-                    elems = Je.filter(selector, elems);
-                }
-                rets = Je.merge(rets, elems);
-            }
-            // 排重
-            rets = Je.uniq(rets);
-            return this.pushStack(rets);
-        },
         // 获取所有子节点
         contents:function() {
             var elems, i = 0, len = this.length, rets = [];
@@ -743,7 +789,7 @@ if (document.all && window.external) {
                 rets = Je.merge(rets, this[i].childNodes);
             }
             // 排重
-            rets = Je.uniq(rets);
+            rets = Je.unique(rets);
             return this.pushStack(rets);
         },
         // 读取设置节点内容
@@ -791,7 +837,8 @@ if (document.all && window.external) {
             window.detachEvent("onload", completed);
         }
     }, readyAttach = function() {
-        var top = false; readyBound = true;
+        var top = false;
+        readyBound = true;
         if (document.readyState === "complete") {
             return Je.ready();
         } else if (document.addEventListener) {
@@ -845,83 +892,113 @@ if (document.all && window.external) {
             }
         }
     });
-    Je.fn.extend({
+    var runtil = /Until$/, rparentsprev = /^(?:parents|prev(?:Until|All))/, guaranteedUnique = {
+        children:true, contents:true, next:true, prev:true
+    };
+    function sibling(cur, dir) {
+        do {
+            cur = cur[dir];
+        } while (cur && cur.nodeType !== 1);
+        return cur;
+    }
+    Je.each({
         // 获取元素父节点
-        parent:function() {
-            return this.parents();
+        parent:function(elem) {
+            var parent = elem.parentNode;
+            return parent && parent.nodeType !== 11 ? parent :null;
         },
         // 获取元素匹配的上级节点
-        parents:function(selector) {
-            var rets = [], elem, i = 0, len = this.length;
-            for (;i < len; i++) {
-                elem = this[i];
-                while (elem = elem.parentNode) {
-                    // 如果selector不为空，不断往上遍历
-                    if (elem.nodeType !== 11 && (selector == null || Je.filter(selector, [ elem ]).length)) {
-                        rets.push(elem);
-                        break;
+        parents:function(elem) {
+            return Je.dir(elem, "parentNode");
+        },
+        parentsUntil:function(elem, i, until) {
+            return Je.dir(elem, "parentNode", until);
+        },
+        // 返回元素之后第一个兄弟节点
+        next:function(elem) {
+            return sibling(elem, "nextSibling");
+        },
+        // 返回元素之前第一个兄弟节点
+        prev:function(elem) {
+            return sibling(elem, "previousSibling");
+        },
+        // 返回元素之后所有兄弟节点
+        nextAll:function(elem) {
+            return Je.dir(elem, "nextSibling");
+        },
+        // 返回元素之前所有兄弟节点
+        prevAll:function(elem) {
+            return Je.dir(elem, "previousSibling");
+        },
+        nextUntil:function(elem, i, until) {
+            return Je.dir(elem, "nextSibling", until);
+        },
+        prevUntil:function(elem, i, until) {
+            return Je.dir(elem, "previousSibling", until);
+        },
+        // 返回除自身以外所有兄弟节点
+        siblings:function(elem) {
+            return Je.sibling((elem.parentNode || {}).firstChild, elem);
+        },
+        // 获取指定子元素
+        children:function(elem) {
+            return Je.sibling(elem.firstChild);
+        }
+    }, function(name, fn) {
+        Je.fn[name] = function(until, selector) {
+            var ret = Je.map(this, fn, until);
+            if (!runtil.test(name)) selector = until;
+            if (selector && typeof selector === "string") ret = Je.filter(selector, ret);
+            ret = this.length > 1 && !guaranteedUnique[name] ? Je.unique(ret) :ret;
+            if (this.length > 1 && rparentsprev.test(name)) {
+                ret = ret.reverse();
+            }
+            return this.pushStack(ret);
+        };
+    });
+    Je.fn.extend({
+        domManip:function(args, callback) {
+            var value = args[0], i = 0, len = this.length, j = 0, vlen = 0;
+            if (len && value != undefined) {
+                if (Je.type(value) === "string") {
+					 nodes = Je.parseNodes( value );
+                     value = Je.buildFragment( nodes );
+                }
+                for (;i < len; i++) {
+                    if (value instanceof Je) {
+                        vlen = value.length;
+                        for (;j < vlen; j++) {
+                            callback.call(this[i], value[j]);
+                        }
+                    } else {
+						var fragment=document.createDocumentFragment();
+						fragment.appendChild(value)
+                        callback.call(this[i], fragment);
                     }
                 }
             }
-            // 清除重复
-            rets = Je.uniq(rets);
-            return this.pushStack(rets);
-        },
-        // 返回元素之后第一个兄弟节点
-        next:function() {
-            return this[0] ? this.pushStack(Je.dir(this[0], "nextSibling", this[0], true)) :Je();
-        },
-        // 返回元素之后所有兄弟节点
-        nextAll:function() {
-            return this[0] ? this.pushStack(Je.dir(this[0], "nextSibling", this[0])) :Je();
-        },
-        // 返回元素之前第一个兄弟节点
-        prev:function() {
-            return this[0] ? this.pushStack(Je.dir(this[0], "previousSibling", this[0], true)) :Je();
-        },
-        // 返回元素之前所有兄弟节点
-        prevAll:function() {
-            return this[0] ? this.pushStack(Je.dir(this[0], "previousSibling", this[0])) :Je();
-        },
-        // 返回除自身以外所有兄弟节点
-        siblings:function() {
-            return this[0] ? this.pushStack(Je.dir(this[0].parentNode.firstChild, "nextSibling", this[0])) :Je();
-        },
-        // 注：没处理ie6的tbody插入问题
-        domManip:function(args, callback) {
-            var frag, nodes, clone, i = 0, len = this.length;
-            if (len === 0) return this;
-            if (typeof args[0] === "string") {
-                nodes = Je.parseNodes(args[0]);
-                frag = Je.buildFragment(nodes);
-            } else if (args[0] && args[0].nodeType) {
-                frag = nodes = args[0];
-            }
-            if (frag) {
-                for (;i < len; i++) {
-                    clone = frag.cloneNode(true);
-                    callback.call(this[i], clone);
-                }
-            }
-            frag = clone = null;
             return this;
         },
         // 在元素里面内容的末尾插入内容
         append:function() {
             return this.domManip(arguments, function(elem) {
-                this.appendChild(elem);
+                if ( this.nodeType === 1 ) {
+                    this.appendChild(elem);
+				}
             });
         },
         // 在元素里面内容的前面插入内容
         prepend:function() {
             return this.domManip(arguments, function(elem) {
-                this.insertBefore(elem, this.firstChild);
+				if ( this.nodeType === 1 ) {
+                    this.insertBefore(elem, this.firstChild);
+				}
             });
         },
         // 在元素之前插入内容
         before:function() {
             return this.domManip(arguments, function(elem) {
-                if (this.parentNode)  this.parentNode.insertBefore(elem, this);
+                if (this.parentNode) this.parentNode.insertBefore(elem, this);
             });
         },
         // 在元素之后插入内容
@@ -964,14 +1041,14 @@ if (document.all && window.external) {
         }
     });
     Je.each([ "width", "height" ], function(i, name) {
-        Je.fn[name] = function(value) {           
-			if (value == undefined) {
-				return getWidthOrHeight(this, name);
-			} else {
-				return this.each(function() {
-					 Je(this).css(name, typeof value === "number" ? value + "px" :value);
-				});
-			}          
+        Je.fn[name] = function(value) {
+            if (value == undefined) {
+                return getWidthOrHeight(this, name);
+            } else {
+                return this.each(function() {
+                    Je(this).css(name, typeof value === "number" ? value + "px" :value);
+                });
+            }
         };
     });
     // 将样式属性转为驼峰式
@@ -988,24 +1065,23 @@ if (document.all && window.external) {
         }
         return ret;
     }
-	function browserAgent() {
-		var ua = window.navigator.userAgent.toLowerCase(),
-			match,
-			browser = { ie: false, firefox: false, chrome: false,  webkit: false, safari: false,};
-			match = /(chrome)[ \/]([\w.]+)/.exec(ua) || /(webkit)[ \/]([\w.]+)/.exec(ua) || /ms(ie)\s([\w.]+)/.exec(ua) || /(firefox)[ \/]([\w.]+)/.exec(ua) || [];
-			if ( match[1] )  browser[ match[1] ] = true;
-			// 在PC端，webkit浏览器不是Chrome/Chromium就是Safari
-			if ( browser.webkit ) browser.safari = true;
-			if ( browser.chrome ) browser.webkit = true;
-		return browser;
-	};
-	Je.browser = browserAgent();
+    function browserAgent() {
+        var ua = window.navigator.userAgent.toLowerCase(), match, browser = {
+            ie:false, firefox:false,  chrome:false, webkit:false, safari:false
+        };
+        match = /(chrome)[ \/]([\w.]+)/.exec(ua) || /(webkit)[ \/]([\w.]+)/.exec(ua) || /ms(ie)\s([\w.]+)/.exec(ua) || /(firefox)[ \/]([\w.]+)/.exec(ua) || [];
+        if (match[1]) browser[match[1]] = true;
+        // 在PC端，webkit浏览器不是Chrome/Chromium就是Safari
+        if (browser.webkit) browser.safari = true;
+        if (browser.chrome) browser.webkit = true;
+        return browser;
+    }
+    Je.browser = browserAgent();
     rootJe = Je(document);
-    
     // 支持amd和cmd
-	"function" === typeof define ? define("Je", [], function () { 
-	    return Je; 
-	}) : ("object" === typeof module && "object" === typeof module.exports) ?  module.exports = Je : window.Je = window.$ = $ = Je;
+    "function" === typeof define ? define("Je", [], function() {
+        return Je;
+    }) :"object" === typeof module && "object" === typeof module.exports ? module.exports = Je :window.Je = window.$ = $ = Je;
 })(window);
 
 //各种触发事件
@@ -1153,7 +1229,7 @@ if (document.all && window.external) {
             return handler && (!event.e || handler.e == event.e) && (!func || handler.fn.toString() === func.toString()) && (!selector || handler.sel == selector);
         });
     }
-	var addTouchs = (Je.browser.webkit || Je.browser.safari) ? "touchstart touchmove touchend" : "";
+    var addTouchs = Je.browser.webkit || Je.browser.safari ? "touchstart touchmove touchend" :"";
     var eventType = ("blur focus focusin focusout load resize scroll unload click dblclick " + "mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave " + "change select submit keydown keypress keyup error paste drop dragstart dragover " + "beforeunload" + addTouchs).split(" ");
     Je.each(eventType, function(i, event) {
         Je.fn[event] = function(callback) {
@@ -1165,7 +1241,6 @@ if (document.all && window.external) {
 //Ajax数据请求
 (function(Je) {
     var document = window.document, key, name, scriptTypeRE = /^(?:text|application)\/javascript/i, xmlTypeRE = /^(?:text|application)\/xml/i, jsonType = "application/json", htmlType = "text/html";
-    function noops() {}
     Je.extend({
         ajaxConfig:{
             type:"GET",
@@ -1174,10 +1249,10 @@ if (document.all && window.external) {
             jsonp:"callback",
             async:true,
             contentType:"",
-            beforeSend:noops,
-            success:noops,
-            error:noops,
-            complete:noops,
+            beforeSend:Je.noop,
+            success:Je.noop,
+            error:Je.noop,
+            complete:Je.noop,
             context:null,
             global:true,
             cache:true,
@@ -1261,7 +1336,7 @@ if (document.all && window.external) {
                     var done, callbackName = "jsonp" + ++jsonpID, xmlHttp = xhrAjax.xhr(), done = false;
                     if (xhrAjax.ajaxBeforeSend(xmlHttp) !== false) {
                         var script = document.createElement("script"), abort = function() {
-                            if (callbackName in window) window[callbackName] = noops;
+                            if (callbackName in window) window[callbackName] = Je.noop;
                             xhrAjax.ajaxComplete("abort", xmlHttp);
                         }, xmlHttp = {
                             abort:abort
@@ -1397,7 +1472,7 @@ if (document.all && window.external) {
                 return false;
             }
             if (opts.timeout > 0) abortTimeout = setTimeout(function() {
-                xmlHttp.onreadystatechange = noops;
+                xmlHttp.onreadystatechange = Je.noop;
                 xmlHttp.abort();
                 xhrAjax.ajaxError(null, "timeout", xmlHttp, opts);
             }, opts.timeout);
