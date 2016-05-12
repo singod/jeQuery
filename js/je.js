@@ -123,8 +123,7 @@
         }
         return retSelector;
     }();
-	var methodAttributes = ['val', 'css', 'html', 'text', 'data', 'width', 'height', 'offset']
-	fragmentRE = /^\s*<(\w+|!)[^>]*>/, singleTagRE = /^<(\w+)\s*\/?>(?:<\/\1>|)$/,
+	var fragmentRE = /^\s*<(\w+|!)[^>]*>/, singleTagRE = /^<(\w+)\s*\/?>(?:<\/\1>|)$/,
 	tagExpanderRE = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:]+)[^>]*)\/>/ig,
 	table = document.createElement('table'),
 	tableRow = document.createElement('tr'),
@@ -343,7 +342,7 @@
             return Je.type(obj) === "array";
         },
         isWindow:function(obj) {
-            return obj != null && obj == obj.window;
+			return obj && typeof obj === 'object' && 'setInterval' in obj;
         },
         isNumeric:function(obj) {
             return !isNaN(parseFloat(obj)) && isFinite(obj);
@@ -548,7 +547,8 @@
     Je.extend({
 		// 返回片段节点
 		fragmentNode : function(html, name, properties) {
-			var dom, nodes, container, args = [], properties = properties || {};
+			var dom, nodes, container, args = [], properties = properties || {},
+			    methodAttributes = ['val', 'css', 'html', 'text', 'data', 'width', 'height', 'offset'];
 			if (singleTagRE.test(html)) dom = Je(document.createElement(RegExp.$1));
 			if (!dom) {
 				if (html.replace) html = html.replace(tagExpanderRE, "<$1></$2>");
@@ -664,20 +664,24 @@
             return this.remove(selector);
         },
         css:function(name, value) {
+			var cssNumber = { 'column-count': 1, 'columns': 1,'box-flex':1,'line-clamp':1, 'font-weight': 1, 'opacity': 1, 'z-index': 1, 'zoom': 1 }  ,  
+				toLower = function(str) { return str.replace(/::/g, '/').replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2').replace(/([a-z\d])([A-Z])/g, '$1_$2').replace(/_/g, '-').toLowerCase()} ,     
+				addPx = function (name, value) {  return (typeof value == "number" && !cssNumber[toLower(name)]) ? value + "px" : value};
+    
             if (typeof name == "string" && typeof value == "string") {
                 return Je.each(this, function() {
-                    (name == "width" || name == "height") && Je.isNumber(value) ? this.style[name] = value + "px" :this.style[name] = value;
+                    this.style[toLower(name)] = addPx(name,value);
                 });
             } else if (Je.isString(name) && typeof value === "undefined") {
                 if (this.size() == 0) return null;
-                var ele = this[0], JeS = function() {
+                var ele = this[0], JeComputedStyle = function() {
                     var def = document.defaultView;
                     return new Function("el", "style", [ "style.indexOf('-')>-1 && (style=style.replace(/-(\\w)/g,function(m,a){return a.toUpperCase()}));", "style=='float' && (style='", def ? "cssFloat" :"styleFloat", "');return el.style[style] || ", def ? "window.getComputedStyle(el, null)[style]" :"el.currentStyle[style]", " || null;" ].join(""));
                 }();
-                return JeS(ele, name);
+                return JeComputedStyle(ele, toLower(name));
             } else {
                 return Je.each(this, function() {
-                    for (var x in name) (x == "width" || x == "height") && Je.isNumber(name[x]) ? this.style[x] = name[x] + "px" :this.style[x] = name[x];
+                    for (var x in name) this.style[toLower(x)] = addPx(x,name[x]);
                 });
             }
         },
@@ -1059,10 +1063,15 @@
     }
     // 宽高属性单位auto转化
     function getWidthOrHeight(elem, name) {
-        var padding = name === "width" ? [ "left", "right" ] :[ "top", "bottom" ], ret = elem[0][camelCase("offset-" + name)];
-        if (ret <= 0 || ret == null) {
-            ret = parseFloat(elem[0][camelCase("client-" + name)]) - parseFloat(Je(elem).css("padding-" + padding[0])) - parseFloat(Je(elem).css("padding-" + padding[1]));
-        }
+		var ret = "";
+		if(Je.isWindow(elem[0])){
+			ret = elem[0].document.documentElement[camelCase("client-" + name)] || elem[0].document.body[camelCase("client-" + name)];
+		}else{
+			var padding = name === "width" ? [ "left", "right" ] :[ "top", "bottom" ], ret = elem[0][camelCase("offset-" + name)];
+			if (ret <= 0 || ret == null) {
+				ret = parseFloat(elem[0][camelCase("client-" + name)]) - parseFloat(Je(elem).css("padding-" + padding[0])) - parseFloat(Je(elem).css("padding-" + padding[1]));
+			}
+		}
         return ret;
     }
     function browserAgent() {
